@@ -1,100 +1,95 @@
-import services.TodoService;
-
 /**
-* app.bxs — BoxLang Todo App logic
-*
-* This script defines the application state and behavior as an Alpine.js 
-* data component, registered directly from BoxLang.
+* app.bxs — BoxLang Todo App
+* 
+* A clean, robust implementation with strictly lowercase keys and explicit 
+* argument passing for maximum reliability.
 */
 
-// Initialize our core domain service
-// This persists in the BoxLang VM heap between calls
-todoService = new services.TodoService().init().bootstrap();
-
-/**
-* Component Registration — registers "bxTodoApp" with Alpine.js
-*/
 function registerComponent() {
     Alpine = js.Alpine;
     if ( isNull( Alpine ) || isNull( Alpine.data ) ) {
         return false;
     }
 
-    println("BoxLang: Registering 'bxTodoApp' component...");
+    println("BoxLang: Registering 'bxtodoapp' component...");
 
-    Alpine.data( "bxTodoApp", () => {
-        // Initial state from our service
-        snapshot = todoService.snapshot();
+    Alpine.data( "bxtodoapp", () => {
+        println("BoxLang: bxtodoapp factory function executed!");
         
-        // Internal helper to update Alpine proxy from service state
-        refresh = ( $data ) => {
-            state = todoService.snapshot();
-            $data.todos     = state.todos;
-            $data.total     = state.total;
-            $data.completed = state.completed;
-            $data.remaining = state.remaining;
-        };
-
         return {
-            "todos"     : snapshot.todos,
-            "total"     : snapshot.total,
-            "completed" : snapshot.completed,
-            "remaining" : snapshot.remaining,
-            "filter"    : "all",
-            "newTodo"   : "",
-            "ready"     : true,
-            "error"     : "",
+            "todos": [
+                { "id": 1, "text": "Compile BoxLang to WASM", "done": true },
+                { "id": 2, "text": "Build reactive UIs with Alpine.js", "done": false }
+            ],
+            "newtodo" : "",
+            "filter"  : "all",
+            "nextid"  : 3,
 
             /**
             * Actions
-            * We pass $data from the template to allow host mutation from BoxLang
+            * We receive specific values to avoid Proxy resolution issues
             */
-
-            "addTodo" : function( $data ) {
-                if ( trim( $data.newTodo ) == "" ) return;
+            "addtodo" : function( text, nextid, todos ) {
+                println("BoxLang: addtodo called with: " + text);
+                cleanText = trim( text );
+                if ( len( cleanText ) == 0 ) return todos;
                 
-                todoService.addTodo( $data.newTodo );
-                $data.newTodo = "";
-                refresh( $data );
+                todos.append({
+                    "id"   : nextid,
+                    "text" : cleanText,
+                    "done" : false
+                });
+                
+                return todos;
             },
 
-            "toggleTodo" : function( id, $data ) {
-                todoService.toggleTodo( id );
-                refresh( $data );
-            },
-
-            "removeTodo" : function( id, $data ) {
-                todoService.removeTodo( id );
-                refresh( $data );
-            },
-
-            "clearCompleted" : function( $data ) {
-                todoService.clearCompleted();
-                refresh( $data );
-            },
-
-            "filteredTodos" : function( $data ) {
-                if ( $data.filter == 'open' ) {
-                    return $data.todos.filter( t => !t.done );
+            "toggletodo" : function( todo ) {
+                println("BoxLang: toggletodo called");
+                if ( !isNull( todo ) ) {
+                    todo.done = !todo.done;
                 }
-                if ( $data.filter == 'done' ) {
-                    return $data.todos.filter( t => t.done );
+                return todo;
+            },
+
+            "removetodo" : function( id, todos ) {
+                println("BoxLang: removetodo called for id: " + id);
+                newList = [];
+                for ( t in todos ) {
+                    if ( t.id != id ) newList.append( t );
                 }
-                return $data.todos;
+                return newList;
+            },
+
+            "clearcompleted" : function( todos ) {
+                println("BoxLang: clearcompleted called");
+                newList = [];
+                for ( t in todos ) {
+                    if ( !t.done ) newList.append( t );
+                }
+                return newList;
+            },
+
+            /**
+            * UI Helper
+            * Explicitly passing filter and todos for reliability
+            */
+            "getlist" : function( currentFilter, allTodos ) {
+                println("BoxLang: getlist() called. Filter: " + currentFilter + ", Count: " + len(allTodos));
+                
+                if ( isNull( allTodos ) ) return [];
+                
+                results = [];
+                for ( t in allTodos ) {
+                    if ( currentFilter == 'open' && t.done ){ continue; }
+                    if ( currentFilter == 'done' && !t.done ){ continue; }
+                    results.append( t );
+                }
+                
+                return results;
             }
         };
     } );
 
-    println("BoxLang: Component registered!");
+    println("BoxLang: Component 'bxtodoapp' registered.");
     return true;
-}
-
-// 1. Try immediate registration
-if ( !registerComponent() ) {
-    println("BoxLang: Alpine not ready, setting up listener...");
-    
-    // 2. Wait for Alpine to initialize
-    js.document.addEventListener( "alpine:init", () => {
-        registerComponent();
-    } );
 }
