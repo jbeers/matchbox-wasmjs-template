@@ -34,13 +34,9 @@ This produces `app.js` and `app.wasm`.
 ### 3. Run the Development Server
 Serve the project using any local web server:
 ```bash
-# Using Python
-python3 -m http.server 8000
-
-# Using Node.js
-npx serve .
+matchbox --serve --port 8080
 ```
-Then open `http://localhost:8000` in your browser.
+Then open `http://localhost:8080` in your browser.
 
 ## How it Works
 
