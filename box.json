@@ -1,0 +1,16 @@
+{
+  "name": "matchbox-wasmjs-template",
+  "version": "0.2.0",
+  "author": "Jacob Beers",
+  "location": "forgeboxStorage",
+  "slug": "matchbox-wasmjs-template",
+  "type": "app",
+  "language": "BoxLang",
+  "description": "Modern MatchBox JS/WASM template using Alpine.js (Components), Tailwind CSS, and BoxLang.",
+  "dependencies": {},
+  "devDependencies": {},
+  "installPaths": {},
+  "scripts": {
+    "build": "matchbox --target js app.bxs"
+  }
+}

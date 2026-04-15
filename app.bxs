@@ -1,0 +1,100 @@
+import services.TodoService;
+
+/**
+* app.bxs — BoxLang Todo App logic
+*
+* This script defines the application state and behavior as an Alpine.js 
+* data component, registered directly from BoxLang.
+*/
+
+// Initialize our core domain service
+// This persists in the BoxLang VM heap between calls
+todoService = new services.TodoService().init().bootstrap();
+
+/**
+* Component Registration — registers "bxTodoApp" with Alpine.js
+*/
+function registerComponent() {
+    Alpine = js.Alpine;
+    if ( isNull( Alpine ) || isNull( Alpine.data ) ) {
+        return false;
+    }
+
+    println("BoxLang: Registering 'bxTodoApp' component...");
+
+    Alpine.data( "bxTodoApp", () => {
+        // Initial state from our service
+        snapshot = todoService.snapshot();
+        
+        // Internal helper to update Alpine proxy from service state
+        refresh = ( $data ) => {
+            state = todoService.snapshot();
+            $data.todos     = state.todos;
+            $data.total     = state.total;
+            $data.completed = state.completed;
+            $data.remaining = state.remaining;
+        };
+
+        return {
+            "todos"     : snapshot.todos,
+            "total"     : snapshot.total,
+            "completed" : snapshot.completed,
+            "remaining" : snapshot.remaining,
+            "filter"    : "all",
+            "newTodo"   : "",
+            "ready"     : true,
+            "error"     : "",
+
+            /**
+            * Actions
+            * We pass $data from the template to allow host mutation from BoxLang
+            */
+
+            "addTodo" : function( $data ) {
+                if ( trim( $data.newTodo ) == "" ) return;
+                
+                todoService.addTodo( $data.newTodo );
+                $data.newTodo = "";
+                refresh( $data );
+            },
+
+            "toggleTodo" : function( id, $data ) {
+                todoService.toggleTodo( id );
+                refresh( $data );
+            },
+
+            "removeTodo" : function( id, $data ) {
+                todoService.removeTodo( id );
+                refresh( $data );
+            },
+
+            "clearCompleted" : function( $data ) {
+                todoService.clearCompleted();
+                refresh( $data );
+            },
+
+            "filteredTodos" : function( $data ) {
+                if ( $data.filter == 'open' ) {
+                    return $data.todos.filter( t => !t.done );
+                }
+                if ( $data.filter == 'done' ) {
+                    return $data.todos.filter( t => t.done );
+                }
+                return $data.todos;
+            }
+        };
+    } );
+
+    println("BoxLang: Component registered!");
+    return true;
+}
+
+// 1. Try immediate registration
+if ( !registerComponent() ) {
+    println("BoxLang: Alpine not ready, setting up listener...");
+    
+    // 2. Wait for Alpine to initialize
+    js.document.addEventListener( "alpine:init", () => {
+        registerComponent();
+    } );
+}
