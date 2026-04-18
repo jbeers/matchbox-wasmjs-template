@@ -1,0 +1,55 @@
+name: Build Release Artifact
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      MATCHBOX_REBUILD_EMBEDDED_STUBS: "0"
+    steps:
+      - name: Checkout app repo
+        uses: actions/checkout@v4
+
+      - name: Download MatchBox
+        run: |
+          curl -L -o matchbox https://github.com/ortus-boxlang/matchbox/releases/download/v0.6.1/matchbox-linux-x64
+          chmod +x matchbox
+          ./matchbox --version
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      - name: Install wasm-bindgen-cli
+        run: cargo install -f wasm-bindgen-cli --version 0.2.114
+
+      - name: Generate JS/WASM bundle
+        run: |
+          ./matchbox --target js --verbose app.bxs
+
+      - name: Setup CommandBox
+        uses: Ortus-Solutions/setup-commandbox@main
+
+      - name: Build App
+        run: |
+          box install production=true save=false
+
+      - name: Generate JS/WASM bundle
+        run: |
+          ./matchbox/target/release/matchbox --target js app.bxs --output app.js
